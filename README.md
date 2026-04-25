@@ -1,279 +1,104 @@
-# [FlashInfer AI Kernel Generation Contest @ MLSys 2026](http://mlsys26.flashinfer.ai/)
+# KernelMind Full-Agent Submission
 
-Create high-performance GPU kernels for state-of-the-art LLM architectures on NVIDIA Blackwell GPUs with humans and/or AI agents.
+This repository is prepared for the **MLSys 2026 FlashInfer AI Kernel Generation Contest**
+as a **Full-Agent** submission.
 
----
+It contains:
 
-<p align="center">
-  <a href="https://www.nvidia.com"><img src="images/nvidia-logo.svg" alt="NVIDIA" height="50"/></a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://modal.com"><img src="images/modal-logo.png" alt="Modal" height="50"/></a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://mlsys.org"><img src="images/mlsys-logo.svg" alt="MLSys" height="50"/></a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://github.com/flashinfer-ai/flashinfer"><img src="images/flashinfer-logo.png" alt="FlashInfer" height="50"/></a>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://github.com/flashinfer-ai/flashinfer-bench"><img src="images/fib_logo.png" alt="FlashInfer-Bench" height="50"/></a>
-</p>
+- final kernel directories in starter-kit-compatible top-level subfolders
+- an `agent/` directory that drives Codex-based iterative optimization
+- supporting starter-kit scripts and docs needed for local reproduction
 
----
+## Submission Type
 
-[FlashInfer-Bench](https://github.com/flashinfer-ai/flashinfer-bench) is our official framework to evaluate your AI-generated kernels.
+- Approach: `Full-Agent`
+- Team / Author: `KernelMind`
 
-## Updates
+If shared with organizers, this repository should be explicitly labeled as the
+**Full-Agent** submission repo.
 
-* 2026.02.05: Full dataset for definitions and workloads are released at [HuggingFace](https://huggingface.co/datasets/flashinfer-ai/mlsys26-contest)
+## Top-Level Kernel Directories
 
-## Competition Tracks
+- `dsa_attention/`
+- `dsa_indexer/`
+- `gdn_decode/`
+- `gdn_prefill/`
+- `moe/`
 
-The competition features three tracks, each targeting a critical LLM operation:
+Each subdirectory has its own:
 
-| Track | Description |
-|-------|-------------|
-| **fused_moe** | Fused Mixture-of-Experts kernel for efficient expert routing and computation |
-| **sparse_attention** | Sparse attention mechanisms for long-context inference |
-| **gated_delta_net** | Gated delta network operations for efficient state updates |
+- `config.toml`
+- `solution/`
+- `scripts/`
 
-**Fork this template once per track** you want to compete in (separate repos for each track).
+There is intentionally **no root-level `config.toml`** so the evaluation pipeline
+does not treat the repository root as an extra solution.
 
-## Getting Started
+## Current Validation Status
 
-### 1. Fork This Template
+Verified in the current local environment:
 
-Click "Use this template" or fork this repository to create your solution repo.
+- `dsa_attention`: full benchmark passed
+- `dsa_indexer`: full benchmark passed
+- `gdn_decode`: smoke benchmark passed
+- `gdn_prefill`: smoke benchmark passed
 
-### 2. Install Dependencies
+## Full-Benchmark Results Collected So Far
 
-```bash
-conda create -n fi-bench python=3.12
-conda activate fi-bench
-pip install flashinfer-bench modal
-```
+- `dsa_attention`
+  - full workloads passed: `23/23`
+  - mean runtime: `0.1959 ms`
+  - mean speedup: `42.51x`
 
-### 3. Download the TraceSet
+- `dsa_indexer`
+  - full workloads passed: `128/128`
+  - mean runtime: `3.6459 ms`
+  - mean speedup: `1.84x`
 
-We provide kernel definitions and workloads in [FlashInfer-Trace format](https://bench.flashinfer.ai/docs/flashinfer-trace). Clone the competition dataset from HuggingFace:
+- `gdn_decode`
+  - smoke workloads passed: `2/2`
+  - mean runtime: `0.005376 ms`
+  - mean speedup: `427.73x`
 
-```bash
-git lfs install
-git clone https://huggingface.co/datasets/flashinfer-ai/mlsys26-contest
-```
+- `gdn_prefill`
+  - smoke workloads passed: `2/2`
+  - mean runtime: `0.235776 ms`
+  - mean speedup: `85.83x`
 
-Set the environment variable:
+## Agent
 
-```bash
-export FIB_DATASET_PATH=/path/to/flashinfer-trace
-```
+The `agent/` directory contains a minimal Codex-driven orchestration loop that:
 
-### 4. Configure Your Solution
+1. creates a writable working copy for a target
+2. runs benchmark commands
+3. invokes Codex non-interactively
+4. resumes the same Codex session across iterations
+5. feeds benchmark summaries back into the next optimization turn
 
-Edit `config.toml` to set your track and team info:
+See:
 
-```toml
-[solution]
-name = "my-team-solution-v1"      # Solution name
-definition = "fused_moe"          # Track: fused_moe | sparse_attention | gated_delta_net
-author = "team-name"              # Team/author name
+- [agent/README.md](agent/README.md)
+- [agent/run_agent.py](agent/run_agent.py)
 
-[build]
-language = "triton"               # triton | cuda
-entry_point = "kernel"            # Kernel function name
-```
+## Local Packaging
 
-### 5. Implement Your Kernel
-
-**For Triton:**
-Edit `solution/triton/kernel.py` with your implementation.
-
-**For CUDA:**
-Edit `solution/cuda/kernel.cu` and `solution/cuda/binding.py` with your implementation.
-
-## Development Workflow
-
-### Pack Your Solution
-
-Generate `solution.json` from your source files:
+Each kernel directory can be packed independently, for example:
 
 ```bash
-python scripts/pack_solution.py
+cd dsa_indexer
+python3 scripts/pack_solution.py
 ```
 
-### Run Local Benchmarks
+## Pre-Submission Checklist
 
-Test your solution on your local GPU:
-
-```bash
-python scripts/run_local.py
-```
-
-Requires: Local CUDA-capable GPU and `FIB_DATASET_PATH` environment variable.
-
-### Run Cloud Benchmarks (Modal)
-
-Test your solution on NVIDIA B200 GPUs via Modal:
-
-**One-time setup:**
-
-```bash
-modal setup
-modal volume create flashinfer-trace
-modal volume put flashinfer-trace /path/to/flashinfer-trace
-```
-
-**Run benchmark:**
-
-```bash
-modal run scripts/run_modal.py
-```
-
-## Submission
-
-To submit your solution for evaluation:
-
-1. Ensure your implementation is complete and tested
-2. Run `python scripts/pack_solution.py` to generate `solution.json`
-3. Commit and push your changes
-4. Tag your commit for evaluation (e.g., `git tag submission-v1`)
-
-## Project Structure
-
-```
-flashinfer-bench-starter-kit/
-├── README.md                    # This file
-├── config.toml                  # Track configuration (edit this)
-├── solution/                    # Solution source files
-│   ├── triton/                  # Triton implementation
-│   │   └── kernel.py           # Your Triton kernel
-│   └── cuda/                    # CUDA implementation
-│       ├── kernel.cu           # Your CUDA kernel
-│       └── binding.py          # TVM FFI bindings
-├── scripts/                     # Utility scripts
-│   ├── run_local.py            # Local benchmark runner
-│   ├── run_modal.py            # Modal cloud benchmark runner
-│   └── pack_solution.py        # Pack source files into solution.json
-└── images/                      # Sponsor logos
-```
-
-## Additional Resources
-
-### FlashInfer Trace Viewer
-
-FlashInfer Trace consists of multiple JSON objects (definitions, workloads, solutions, and traces), which can contain large code blocks. To easily visualize and inspect these objects, you can use the [FlashInfer Trace Viewer](https://bench.flashinfer.ai/viewer). Simply paste any FlashInfer Trace JSON into the viewer to get a friendly, structured view of its contents.
-
-### Solution Handling API
-
-```python
-from flashinfer_bench import BuildSpec
-from flashinfer_bench.agents import pack_solution_from_files, extract_solution_to_files
-
-# Pack source files into a Solution object
-spec = BuildSpec(
-    language="triton",  # or "cuda"
-    target_hardware=["cuda"],
-    entry_point="my_kernel",
-)
-solution = pack_solution_from_files(
-    path="./my_solution_dir",
-    spec=spec,
-    name="my_solution_v1",
-    definition="fused_moe",
-    author="your_name",
-)
-
-# Extract a Solution to files in a working directory
-extract_solution_to_files(solution, "./output_dir")
-```
-
-### Running Sanitizers
-
-```python
-from flashinfer_bench.agents import flashinfer_bench_run_sanitizer
-
-output = flashinfer_bench_run_sanitizer(
-    solution=solution,
-    workload=workload,
-    sanitizer_types=["memcheck", "racecheck", "synccheck", "initcheck"],
-    timeout=300,
-)
-print(output)
-```
-
-### NCU Profiling
-
-```python
-from flashinfer_bench.agents import flashinfer_bench_run_ncu
-
-output = flashinfer_bench_run_ncu(
-    solution=solution,
-    workload=workload,
-    set="detailed",
-    page="details",
-    timeout=120,
-)
-print(output)
-```
-
-### List Available Tools
-
-```python
-from flashinfer_bench.agents import get_all_tool_schemas
-
-schemas = get_all_tool_schemas()
-# Returns list of OpenAI-compatible function schemas
-```
+- update `solution.name` if a new submission version is desired
+- keep `author = "KernelMind"` consistent across all kernel directories
+- commit and push the final repository state
+- create and push a git tag for evaluation
+- if the repo is private, grant read access to `flashinfer-bot`
+- send the GitHub repo URL to organizers and explicitly mark it as `Full-Agent`
 
 ## Notes
 
-### Destination Passing Style (DPS)
-
-FlashInfer-Bench uses destination passing style (DPS) by default, where both inputs and outputs are passed as function parameters. DPS avoids measuring tensor allocation overhead, resulting in more accurate performance numbers. We recommend using DPS when possible, as it yields better benchmark results.
-
-**Important:** Avoid using variadic input arguments in your kernel signatures, as they will fail the builder validation check.
-
-If your kernel uses value-returning style (i.e., returns output tensors instead of writing to pre-allocated ones), set `destination_passing_style` to `false` in your solution's `spec`:
-
-```json
-{
-  "name": "my_solution",
-  "definition": "gdn_decode_qk4_v8_d128_k_last",
-  "author": "my_name",
-  "spec": {
-    "language": "triton",
-    "target_hardware": ["cuda"],
-    "entry_point": "kernel.py::my_kernel",
-    "dependencies": [],
-    "destination_passing_style": false
-  },
-  "sources": [...]
-}
-```
-
-**Common error when DPS is mismatched:**
-
-```
-Destination-passing style callable: expected xx parameters, but got xx
-```
-
-This can happen for two reasons: (1) your kernel function signature has the wrong number of parameters, or (2) your kernel uses value-returning style but the solution still has `destination_passing_style` set to `true` by default. For the latter case, fix by setting `destination_passing_style` to `false`.
-
-### CUDA Kernel Bindings
-
-For CUDA kernel implementations, we recommend using [TVM FFI](https://tvm.apache.org/ffi/) for Python bindings. The `flashinfer_bench.agents` module provides TVM FFI agent instruction prompts to assist with development.
-
-You can set the `binding` field in your solution's `spec` to specify the C++ binding type. Defaults to `"tvm-ffi"` if not specified. Supported values: `"tvm-ffi"`, `"torch"`.
-
-```json
-{
-  "name": "my_cuda_solution",
-  "definition": "gdn_decode_qk4_v8_d128_k_last",
-  "author": "my_name",
-  "spec": {
-    "language": "cuda",
-    "target_hardware": ["cuda"],
-    "entry_point": "kernel.cu::my_kernel",
-    "dependencies": [],
-    "binding": "torch"
-  },
-  "sources": [...]
-}
-```
+- `FAQ.md` and `EVALUATION.md` are preserved from the starter-kit for reference.
+- `SUBMISSION_LAYOUT.md` documents how the current top-level layout was assembled.

@@ -1,10 +1,15 @@
 """
-FlashInfer-Bench Local Benchmark Runner.
+FlashInfer-Bench Modal Cloud Benchmark Runner.
 
-Automatically packs the solution from source files and runs benchmarks locally.
+Automatically packs the solution from source files and runs benchmarks
+on NVIDIA B200 GPUs via Modal.
+
+Setup (one-time):
+    modal setup
+    modal volume create flashinfer-trace
+    modal volume put flashinfer-trace /path/to/flashinfer-trace/
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -12,49 +17,30 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+import modal
 from flashinfer_bench import Benchmark, BenchmarkConfig, Solution, TraceSet
-from scripts.pack_solution import pack_solution
+
+app = modal.App("flashinfer-bench")
+
+trace_volume = modal.Volume.from_name("flashinfer-trace", create_if_missing=True)
+TRACE_SET_PATH = "/data"
+
+image = (
+    modal.Image.debian_slim(python_version="3.12")
+    .pip_install("flashinfer-bench", "torch", "triton", "numpy")
+)
 
 
-TRACK_ALIASES = {
-    "fused_moe": "moe_fp8_block_scale_ds_routing_topk8_ng8_kg4_e32_h7168_i2048",
-    "sparse_attention": "dsa_sparse_attention_h16_ckv512_kpe64_topk2048_ps64",
-    "gated_delta_net": "gdn_decode_qk4_v8_d128_k_last",
-}
-
-
-def get_trace_set_path() -> str:
-    """Get trace set path from environment variable."""
-    path = os.environ.get("FIB_DATASET_PATH")
-    if not path:
-        raise EnvironmentError(
-            "FIB_DATASET_PATH environment variable not set. "
-            "Please set it to the path of your flashinfer-trace dataset."
-        )
-    return path
-
-
+@app.function(image=image, gpu="B200:1", timeout=3600, volumes={TRACE_SET_PATH: trace_volume})
 def run_benchmark(solution: Solution, config: BenchmarkConfig = None) -> dict:
-    """Run benchmark locally and return results."""
+    """Run benchmark on Modal B200 and return results."""
     if config is None:
         config = BenchmarkConfig(warmup_runs=3, iterations=100, num_trials=5)
 
-    trace_set_path = get_trace_set_path()
-    trace_set = TraceSet.from_path(trace_set_path)
+    trace_set = TraceSet.from_path(TRACE_SET_PATH)
 
     if solution.definition not in trace_set.definitions:
-        alias_hint = TRACK_ALIASES.get(solution.definition)
-        if alias_hint:
-            raise ValueError(
-                f"Definition '{solution.definition}' not found in trace set. "
-                f"Use a concrete dataset definition name instead, for example '{alias_hint}'."
-            )
-
-        sample_defs = ", ".join(sorted(trace_set.definitions)[:5])
-        raise ValueError(
-            f"Definition '{solution.definition}' not found in trace set. "
-            f"Available examples: {sample_defs}"
-        )
+        raise ValueError(f"Definition '{solution.definition}' not found in trace set")
 
     definition = trace_set.definitions[solution.definition]
     workloads = trace_set.workloads.get(solution.definition, [])
@@ -116,8 +102,11 @@ def print_results(results: dict):
             print()
 
 
+@app.local_entrypoint()
 def main():
-    """Pack solution and run benchmark."""
+    """Pack solution and run benchmark on Modal."""
+    from scripts.pack_solution import pack_solution
+
     print("Packing solution from source files...")
     solution_path = pack_solution()
 
@@ -125,15 +114,11 @@ def main():
     solution = Solution.model_validate_json(solution_path.read_text())
     print(f"Loaded: {solution.name} ({solution.definition})")
 
-    print("\nRunning benchmark...")
-    results = run_benchmark(solution)
+    print("\nRunning benchmark on Modal B200...")
+    results = run_benchmark.remote(solution)
 
     if not results:
         print("No results returned!")
         return
 
     print_results(results)
-
-
-if __name__ == "__main__":
-    main()

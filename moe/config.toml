@@ -1,0 +1,12 @@
+[solution]
+name = "kernelmind-fullagent-moe-v1"
+definition = "moe_fp8_block_scale_ds_routing_topk8_ng8_kg4_e32_h7168_i2048"
+author = "KernelMind"
+
+[build]
+language = "python"
+entry_point = "main.py::run"
+source_dir = "python"
+dependencies = ["torch", "triton"]
+target_hardware = ["cuda"]
+destination_passing_style = false

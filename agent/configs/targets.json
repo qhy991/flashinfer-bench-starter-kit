@@ -1,0 +1,22 @@
+{
+  "dsa_attention": {
+    "path": "dsa_attention",
+    "definition": "dsa_sparse_attention_h16_ckv512_kpe64_topk2048_ps64",
+    "benchmark_cmd": "FIB_DATASET_PATH=${FIB_DATASET_PATH:?} bash scripts/bench.sh agent --max-workloads 32 --warmup 2 --iterations 10 --num-trials 2"
+  },
+  "dsa_indexer": {
+    "path": "dsa_indexer",
+    "definition": "dsa_topk_indexer_fp8_h64_d128_topk2048_ps64",
+    "benchmark_cmd": "FIB_DATASET_PATH=${FIB_DATASET_PATH:?} bash scripts/bench.sh agent --max-workloads 32 --warmup 2 --iterations 10 --num-trials 2"
+  },
+  "gdn_decode": {
+    "path": "gdn_decode",
+    "definition": "gdn_decode_qk4_v8_d128_k_last",
+    "benchmark_cmd": "python3 scripts/pack_solution.py"
+  },
+  "gdn_prefill": {
+    "path": "gdn_prefill",
+    "definition": "gdn_prefill_qk4_v8_d128_k_last",
+    "benchmark_cmd": "python3 scripts/pack_solution.py"
+  }
+}

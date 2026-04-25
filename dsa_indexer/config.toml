@@ -1,0 +1,9 @@
+[solution]
+name = "kernelmind-fullagent-dsa-indexer-v1"
+definition = "dsa_topk_indexer_fp8_h64_d128_topk2048_ps64"
+author = "KernelMind"
+
+[build]
+language = "python"
+entry_point = "kernel.py::run"
+destination_passing_style = true

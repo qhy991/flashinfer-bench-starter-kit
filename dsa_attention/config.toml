@@ -1,0 +1,10 @@
+[solution]
+name = "kernelmind-fullagent-dsa-attention-v1"
+definition = "dsa_sparse_attention_h16_ckv512_kpe64_topk2048_ps64"
+author = "KernelMind"
+
+[build]
+language = "cuda"
+entry_point = "binding.cpp::forward"
+destination_passing_style = true
+binding = "torch"

@@ -1,0 +1,9 @@
+[solution]
+name = "kernelmind-fullagent-gdn-prefill-v1"
+definition = "gdn_prefill_qk4_v8_d128_k_last"
+author = "KernelMind"
+
+[build]
+language = "python"
+entry_point = "kernel.py::run"
+destination_passing_style = false
